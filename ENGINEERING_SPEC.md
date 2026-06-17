@@ -7,7 +7,7 @@
 
 ## 1. Build Contract
 
-This document is not an MVP brief. It defines the production engineering target for privacy-conscious RWA compliance infrastructure that can support real issuers, providers, and investors only after legal, privacy, security, and operations gates are satisfied.
+This document defines the production engineering target for privacy-conscious RWA compliance infrastructure that can support real issuers, providers, and investors only after legal, privacy, security, and operations gates are satisfied.
 
 Engineers should not need product clarification for credential lifecycle, policy evaluation, provider registry, CCIP propagation, reason codes, tests, or release gates. Escalate only for legal advice, real investor onboarding, real provider contracts, production RWA pools, secrets, or mainnet deployment.
 
