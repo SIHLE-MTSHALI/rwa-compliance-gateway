@@ -1,215 +1,179 @@
 # RWA Compliance Gateway PRD
 
-**Status:** Product design ready for implementation  
+**Status:** Full production product specification  
 **Last reviewed:** 2026-06-17  
-**Primary audience:** RWA issuers, institutional investors, compliance teams, smart contract engineers, security reviewers  
-**Public-readiness goal:** define a serious compliance automation layer with privacy boundaries, issuer controls, and realistic legal disclaimers.
+**Primary audience:** RWA issuers, institutional investors, compliance teams, smart contract engineers, security reviewers, Chainlink reviewers  
+**Product ambition:** build practical privacy-conscious compliance infrastructure for tokenized real-world asset access, with issuer-controlled policy, credential lifecycle, cross-chain freshness, and auditable decisions.
 
-## 1. Product Vision
+## 1. Product Thesis
 
-RWA Compliance Gateway lets an institutional investor verify once, receive a portable compliance credential, and access participating tokenized real-world asset pools across supported chains. Issuers define pool-specific rules. Investors keep sensitive identity data off-chain. Chainlink CRE coordinates verification workflows. Confidential compute isolates sensitive provider responses. CCIP propagates credential status. Automation manages renewal and expiry.
+RWA Compliance Gateway lets an investor or institution verify once with approved providers, receive a minimal compliance credential, and access participating tokenized real-world asset pools where issuer-defined policy permits. Chainlink workflows coordinate provider result intake, credential lifecycle, renewal, revocation, and cross-chain propagation. Pools receive reason-coded access decisions without storing raw investor PII on public chain state.
 
-The product should feel like compliance infrastructure, not a DeFi marketing wrapper.
+The target is not a demo. The target is production-grade compliance infrastructure that can support real issuers and institutional users only after legal, provider, privacy, security, and operational readiness gates are satisfied.
 
-## 2. Problem
+## 2. Real-World Problem
 
-Tokenized real-world assets require investor verification, jurisdiction rules, sanctions screening, accreditation checks, and ongoing monitoring. Today, every RWA platform tends to rebuild this pipeline. That creates duplicated investor onboarding, repeated PII exposure, inconsistent rules, and slow capital deployment.
+RWA platforms need identity, entity, sanctions, accreditation, jurisdiction, allocation, and ongoing monitoring controls. Rebuilding these checks for every pool creates repeated onboarding, duplicated PII exposure, inconsistent rules, and slow capital deployment.
 
-The core product problem: an investor verified for one RWA pool cannot safely and privately reuse that verification across other pools and chains.
+The product must solve for:
 
-## 3. Target Users
+1. Reusable compliance credential state without raw PII on public chains.
+2. Issuer-configured pool policies with versioning and auditability.
+3. Allow, deny, and review-required outcomes with reason codes.
+4. Credential renewal, expiry, suspension, revocation, and cross-chain freshness.
+5. Separation between technical enforcement and legal/regulatory advice.
+6. Operational support for providers, issuers, auditors, and investors.
 
-| Persona | Job to be done | Success condition |
-| --- | --- | --- |
-| Institutional investor | Complete verification once and access approved pools | Can see credential status, expiry, and allowed pools |
-| RWA issuer | Configure pool compliance rules | Can enforce jurisdiction, accreditation, freshness, and allocation rules |
-| Compliance officer | Review and revoke credentials when needed | Has auditable actions without exposing raw PII on-chain |
-| Protocol developer | Integrate compliance checks | Can call a clear interface and handle allow/deny/review states |
-| Auditor/regulator | Inspect policy enforcement | Can verify rules, events, and credential lifecycle without seeing PII |
+## 3. Product Principles
 
-## 4. Product Principles
+- Raw PII minimization is mandatory.
+- Compliance policy is issuer-defined and versioned.
+- Manual review is a first-class state, not an accidental allow.
+- Destination-chain state must expose freshness.
+- Legal claims require qualified review; the product provides enforcement infrastructure, not legal certainty.
+- Every credential and policy decision must be auditable without revealing sensitive personal data.
 
-- Compliance is policy-driven: issuers define rules, the gateway enforces them.
-- PII minimization is mandatory: raw identity documents and provider responses must not touch chain state.
-- Credentials are lifecycle objects: issue, active, renew, expire, suspend, revoke.
-- Legal claims require legal review: docs should describe architecture, not promise regulatory compliance.
-- Cross-chain state is eventually consistent and must show freshness.
-- Operators need emergency controls, but not arbitrary fund or credential control.
+## 4. Full Product Scope
 
-## 5. Scope
+### Core Production Capabilities
 
-### MVP Scope
+- Provider registry with KYC/KYB provider adapters, schema support, status, pause, and deprecation.
+- Credential registry with CCID, credential type, provider ID, schema version, status, expiry, evidence hash, jurisdiction class, investor class, nonce, and timestamps.
+- Chainlink workflows for verification, renewal, scheduled expiry, revocation, provider health, and propagation.
+- Pool policy manager with issuer-defined jurisdiction, investor class, freshness, allocation cap, manual review, reserve/reference checks, and version delays.
+- Pool compliance module returning allow, deny, or review-required with reason codes.
+- CCIP sender/receiver for credential propagation and destination freshness.
+- Investor portal for credential status, expiry, renewal, revocation request, supported pools, and privacy explanation.
+- Issuer dashboard for policy builder, version history, access decisions, audit trail, and export.
+- Auditor view for lifecycle events, policy versions, access decisions, and evidence hashes without raw PII.
+- Operations runbooks for provider outage, false credential, revocation, privacy incident, stale destination, and emergency pause.
 
-- Investor credential registry with status, type, jurisdiction attributes, expiry, issuer/provider, and hash references.
-- Pool policy module for issuer-configured access rules.
-- CRE workflow for KYC/AML provider result intake and credential issuance.
-- Confidential compute boundary for provider responses and sensitive attributes where available.
-- CCIP propagation of credential state to destination chains.
-- Automation for expiry monitoring, renewal reminders, and scheduled revocation checks.
-- Issuer dashboard requirements for policy configuration, credential status, and audit trail.
-- Investor portal requirements for verification status, renewal, and revocation request visibility.
+### Scale and Ecosystem Capabilities
 
-### Non-Goals for MVP
+- Multiple investor classes, jurisdictions, provider adapters, and credential schemas.
+- Multi-issuer policy templates.
+- Integration with Proof of Reserve or issuer-specific asset status where appropriate.
+- Credential portability across chains and participating pools.
+- Institutional reporting exports.
+- Provider onboarding and schema migration process.
 
-- Replacing legal counsel or regulated compliance officers.
-- Storing investor documents, beneficial owner data, or raw provider reports on-chain.
-- Guaranteeing securities-law compliance in every jurisdiction.
-- Supporting retail investors in every country.
-- Performing asset custody or fund administration for RWA pools.
+## 5. Explicit Boundaries
 
-## 6. Core Workflows
+The product must not store raw names, addresses, tax IDs, emails, phone numbers, documents, beneficial owner data, provider case details, or raw reports in public chain state, events, public fixtures, or logs.
 
-### Investor Verification
+The product must not claim legal compliance, regulatory approval, investor suitability, or jurisdictional sufficiency without qualified legal review.
 
-1. Investor starts verification from an issuer or gateway portal.
-2. Investor selects or is routed to a supported KYC/KYB provider.
-3. Provider completes identity, entity, sanctions, and accreditation checks off-chain.
-4. CRE workflow receives a provider-signed result or status reference.
-5. Confidential compute evaluates sensitive attributes and emits only the minimum credential output.
-6. Credential registry records status, expiry, policy-relevant attributes, and evidence hash.
-7. CCIP propagates credential state to selected destination chains.
+## 6. User Journeys
 
-### Pool Access
+### Investor
 
-1. Investor attempts to subscribe or deposit into an RWA pool.
-2. Pool calls `checkAccess(investorCcid, poolId, amount)`.
-3. Policy module evaluates credential status, jurisdiction, accreditation, freshness, allocation cap, and pool-specific rules.
-4. Pool receives `ALLOW`, `DENY`, or `REVIEW_REQUIRED` with a reason code.
-5. Event log records the access decision without PII.
+1. Starts verification from a gateway or issuer portal.
+2. Completes provider process off-chain.
+3. Receives credential status, expiry, supported pools, and destination-chain freshness.
+4. Requests renewal or revocation when needed.
+5. Sees why access is allowed, denied, or under review without exposing raw PII.
 
-### Credential Lifecycle
+### Issuer
 
-1. Credential approaches expiry.
-2. Automation triggers renewal notice or renewal workflow.
-3. Provider re-checks required fields.
-4. Credential is renewed, suspended, expired, or revoked.
-5. State propagates across chains.
+1. Defines pool policy by credential type, jurisdiction, investor class, freshness, allocation, and manual review requirements.
+2. Reviews policy preview and version delay.
+3. Monitors access decisions and audit trail.
+4. Suspends or updates policy through governed process.
+
+### Compliance Officer
+
+1. Reviews flagged credentials or review-required decisions.
+2. Suspends, revokes, or requests renewal through reason-coded actions.
+3. Exports audit evidence without exposing raw PII.
+
+### Protocol Developer
+
+1. Integrates `checkAccess` or SDK helper.
+2. Handles allow, deny, and review-required distinctly.
+3. Monitors policy and credential freshness.
 
 ## 7. Functional Requirements
 
-| ID | Requirement | Priority | Acceptance criteria |
-| --- | --- | --- | --- |
-| FR-001 | Issue compliance credential | P0 | Credential has CCID, type, status, expiry, issuer/provider, and evidence hash |
-| FR-002 | Keep PII off-chain | P0 | No raw document, name, address, tax ID, phone, email, or provider report in storage/events |
-| FR-003 | Configure pool policy | P0 | Issuer can define jurisdiction, accreditation, freshness, allocation, and manual review rules |
-| FR-004 | Evaluate pool access | P0 | Module returns allow, deny, or review with reason code |
-| FR-005 | Renew credential | P0 | Renewal updates expiry and status with event trail |
-| FR-006 | Revoke credential | P0 | Revoked credential fails access checks on source and propagated chains |
-| FR-007 | Propagate via CCIP | P0 | Destination chain validates source and updates credential freshness state |
-| FR-008 | Support compliance roles | P0 | Admin, issuer, compliance officer, emergency pauser, and auditor roles are distinct |
-| FR-009 | Expose audit trail | P0 | Policy changes, credential lifecycle, access decisions, and propagation events are indexed |
-| FR-010 | Support manual review | P1 | Ambiguous cases can return review state instead of false allow/deny certainty |
-| FR-011 | Integrate Proof of Reserve references | P2 | Pool policy can reference reserve attestation status where available |
+| ID | Requirement | Acceptance criteria |
+| --- | --- | --- |
+| FR-001 | Credential lifecycle | Issue, renew, suspend, expire, revoke, and propagate states are explicit |
+| FR-002 | PII minimization | No raw PII appears in storage, events, logs, or public fixtures |
+| FR-003 | Provider registry | Providers have schema support, status, pause, deprecation, and metadata |
+| FR-004 | Pool policy | Issuers configure versioned jurisdiction, investor class, freshness, cap, and review rules |
+| FR-005 | Access decisions | Module returns allow, deny, or review-required with reason code |
+| FR-006 | Cross-chain freshness | Destination state exposes source chain, nonce, and last update time |
+| FR-007 | Revocation | Revoked credentials fail source checks immediately and propagate |
+| FR-008 | Manual review | Review-required never defaults to allow |
+| FR-009 | Audit trail | Credential lifecycle, policy changes, and access decisions are indexed |
+| FR-010 | Operations | Provider outage, stale destination, false credential, and privacy incident runbooks exist |
 
 ## 8. Chainlink Architecture
 
-- CRE orchestrates verification, renewal, revocation, and provider adapter workflows.
-- Confidential compute is the privacy boundary for sensitive KYC/KYB result processing where supported.
-- ACE-style identity and policy concepts inform CCID binding and pool rule evaluation.
-- CCIP propagates credential status to destination chain registries.
-- Automation monitors expiry and scheduled lifecycle tasks.
-- Proof of Reserve can provide reserve status inputs for RWA pools where appropriate.
+- Chainlink CRE coordinates provider result intake, renewal, revocation, and lifecycle workflows.
+- Confidential compute is the preferred processing boundary for sensitive provider responses where supported.
+- Chainlink CCIP propagates credential state to destination chains.
+- Chainlink Automation triggers expiry checks, renewal workflows, revocation checks, and provider health monitoring.
+- Chainlink Proof of Reserve can inform pool policy where reserve status matters.
 
 Design constraints:
 
-- CCIP destination state must expose source chain, source registry, nonce, and last update time.
-- Pool policies must be versioned and timelocked where changes affect investor access.
-- Manual review states must not be treated as allow by default.
-- No provider API keys or secrets may be committed to the repo or emitted in workflow logs.
+- Workflow logs must exclude raw PII and provider reports.
+- CCIP receivers validate router, source chain, source sender, credential schema, nonce, and payload type.
+- Policy changes are versioned and delayed where they affect access.
+- Stale destination state cannot be treated as valid by default.
 
-## 9. Smart Contract Architecture
+## 9. Security, Privacy, and Abuse Cases
 
-| Contract | Responsibility |
+| Risk | Required mitigation |
 | --- | --- |
-| `ComplianceGateway` | CRE result intake, credential lifecycle coordination, role gateway |
-| `CredentialRegistry` | Credential status, expiry, version, evidence hash, revocation state |
-| `PoolPolicyManager` | Issuer-defined rules and policy versioning |
-| `PoolComplianceModule` | Access evaluation and reason-code output |
-| `CrossChainCredentialSender` | CCIP propagation from source registry |
-| `CrossChainCredentialReceiver` | Destination registry update validation |
-| `ProviderRegistry` | Supported KYC/KYB providers and adapter metadata |
-| `EmergencyControls` | Scoped pause for issuance, access checks, propagation, or provider use |
+| PII leakage | Data minimization, no raw PII in public state/logs/fixtures, privacy tests |
+| Wrong pool access | Reason-coded policy engine and no default allow |
+| Provider compromise | Provider pause, TTLs, revocation, manual review fallback |
+| Stale destination state | Freshness timestamps and strict destination checks |
+| Governance abuse | Scoped roles, timelocks, issuer/compliance/admin separation |
+| Regulatory overclaim | Legal boundary docs and counsel review before claims |
+| Policy migration error | Version delays, previews, evented changes, rollback plan |
 
-## 10. Data and Privacy Model
+## 10. Production Readiness Gates
 
-Data categories:
+### Gate 1: Production Foundation
 
-- Raw PII: documents, names, addresses, tax IDs, beneficial ownership. Must remain off-chain with regulated providers or controlled backend systems.
-- Sensitive provider response: detailed provider result. Process only inside confidential workflow where available.
-- Policy attributes: minimum required facts such as jurisdiction class, investor type, accreditation tier, sanctions pass/fail, expiry. Store only if needed and preferably as hashes or compact enums.
-- Public state: credential status, expiry, policy version, reason codes, evidence hashes, and events.
+- Credential registry, provider registry, policy manager, access module, workflows, SDK, and portal implemented locally.
+- Fixture providers prove allow, deny, review, renewal, expiry, suspension, revocation, and propagation.
 
-The docs must state that privacy architecture reduces on-chain exposure but does not by itself create legal compliance.
+### Gate 2: Public Testnet Pilot
 
-## 11. UX Requirements
+- Source and destination testnet credential state works without real investor PII.
+- Issuer dashboard, investor portal, reason-coded access, and monitoring operate.
 
-### Investor Portal
+### Gate 3: Provider and Issuer Pilot
 
-- Shows verification status, required next action, expiry, supported pools, and destination chain freshness.
-- Explains what data is stored on-chain and what is not.
-- Provides renewal and revocation request flow.
-- Avoids blockchain jargon where possible.
+- Provider integration reviewed.
+- Legal/privacy review completed for supported credential class and jurisdiction.
+- Issuer policy and access decisions tested with capped, non-production or controlled pilot flows.
 
-### Issuer Dashboard
+### Gate 4: Production Network
 
-- Policy builder with jurisdiction, accreditation, freshness, cap, and manual-review rules.
-- Change preview before policy updates.
-- Audit trail for policy changes and access decisions.
-- Exportable compliance evidence without raw PII leakage.
+- Multiple providers, issuers, credential classes, jurisdictions, pools, and chains supported.
+- Monitoring, audit exports, incident response, privacy operations, and governance are operational.
 
-## 12. Security and Abuse Cases
-
-| Risk | Mitigation |
-| --- | --- |
-| PII leakage | Do not store raw PII on-chain; prohibit sensitive workflow logs; secret scanning |
-| Provider compromise | Provider pause, short credential TTLs, evidence hashes, manual review fallback |
-| Wrong pool access | Reason-coded policy engine, tests for deny/review states, no default allow |
-| Cross-chain spoofing | Validate CCIP router, source chain, source sender, nonce, and credential schema |
-| Stale destination state | Freshness timestamps and strict freshness checks in pool policy |
-| Governance abuse | Safe multi-sig, timelock, scoped roles, public policy-change events |
-| Regulatory overclaim | Docs include legal-disclaimer language and require counsel review before launch |
-
-## 13. Verification Plan
-
-Required before testnet launch:
-
-- Unit tests for credential issue, renew, suspend, revoke, expire, and access checks.
-- Fuzz tests for policy parameters, allocation caps, expiry boundaries, and reason codes.
-- Invariant tests: revoked never allows, expired never allows, manual review never allows by default, policy version changes are traceable.
-- CCIP local simulator tests for propagation, replay, wrong source, stale nonce, and destination pause.
-- CRE simulation tests for provider pass, fail, manual review, timeout, malformed response, and revoked provider.
-- Secret scanning and documentation review for PII and unsupported legal claims.
-- Static analysis with no unresolved high or critical findings.
-
-## 14. Launch Criteria
-
-The project is ready for public testnet when:
-
-- One provider adapter works in a simulated or testnet-safe flow.
-- One source chain and one destination chain can issue and propagate credential state.
-- One sample RWA pool can enforce allow, deny, and review states.
-- Privacy and legal limitations are documented plainly.
-- No docs imply real investor onboarding or regulatory approval before those exist.
-
-## 15. Success Metrics
+## 11. Success Metrics
 
 | Metric | Target |
 | --- | --- |
-| Raw PII in on-chain state/events | 0 tolerated |
-| Revoked or expired access allowed | 0 tolerated |
-| Policy change auditability | 100% of changes emit versioned events |
-| Destination state freshness visibility | 100% of propagated credentials expose last update time |
-| Integrator time to first access check | Under 20 minutes from docs |
+| Raw PII in chain state/events/logs | 0 tolerated |
+| Revoked or expired credential allowed | 0 tolerated |
+| Review-required treated as allow | 0 tolerated |
+| Stale destination state accepted | 0 tolerated |
+| Policy change auditability | 100% versioned and evented |
+| Access decision explainability | 100% reason-coded |
+| Integrator time to first safe check | Under 20 minutes from docs |
 
-## 16. Open Questions
+## 12. Documentation Requirements
 
-- Which provider should be first for a non-production MVP adapter?
-- Which jurisdiction and investor-type fields are necessary for launch without over-collecting data?
-- Should pool policies live entirely on-chain or use off-chain signed policy bundles with on-chain hashes?
-- What counsel review is required before public claims about RWA compliance?
-- How should users request deletion or revocation when on-chain events are immutable?
+Before public release, the repository must include architecture, privacy model, policy schema, provider adapter guide, issuer guide, investor guide, deployment guide, operations runbook, incident response plan, threat model, and audit readiness checklist.
 
-## 17. References
+## 13. References
 
 - Chainlink CRE: https://docs.chain.link/cre
 - Chainlink CCIP: https://docs.chain.link/ccip
