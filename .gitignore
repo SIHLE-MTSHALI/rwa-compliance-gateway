@@ -1,0 +1,52 @@
+# Compiler output
+out/
+cache/
+cache_hardhat/
+artifacts/
+typechain-types/
+
+# Dependencies
+node_modules/
+lib/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+lcov.info
+coverage.json
+
+# Build artifacts
+dist/
+build/
+
+# Foundry
+broadcast/
+cache_forge/
+
+# Hardhat
+typechain/
+deployments/localhost/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets
+secrets.json
+*.keystore
