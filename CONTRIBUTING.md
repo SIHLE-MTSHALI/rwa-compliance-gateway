@@ -1,76 +1,57 @@
-# Contributing
+# Contributing to RWA Compliance Gateway
 
-Thank you for contributing to this project. This document outlines standards and processes.
+Thank you for helping improve RWA Compliance Gateway. This project is intended to become practical, production-grade compliance infrastructure for tokenized real-world asset access, not a prototype.
 
-## Code of Conduct
+## Current Stage
 
-- Be respectful and constructive
-- Focus on the technical merits of contributions
-- No harassment, discrimination, or unprofessional behavior
+The repository is in product and architecture design. Treat `PRD.md` as the canonical product specification and `ENGINEERING_SPEC.md` as the engineering build contract.
 
-## Development Standards
+Do not add claims about production investor onboarding, legal or regulatory approval, live RWA pools, completed audits, Chainlink endorsement, bug bounties, or provider partnerships unless there is verifiable evidence in the repository.
 
-This project follows **Crypto/Money Software Development Standards — Mid-2026**. Key requirements:
+## Contribution Focus
 
-### Smart Contracts (Solidity)
-- **Foundry** as primary development framework
-- **Solidity 0.8.30+** with pinned compiler version
-- **Full NatSpec** on all public/external functions (CI-enforced)
-- **CEI pattern** in every state-changing function
-- **ReentrancyGuardTransient** on all external-call functions
-- **AccessControl** (not Ownable) for permission management
-- ≥90% line coverage, ≥80% branch coverage
+High-value contributions improve the full product path:
 
-### CRE Workflows
-- TypeScript or Go compiled to WebAssembly
-- Always use `bigint` for on-chain values
-- Use `runtime.now()` not `Date.now()`
-- Secrets via Vault DON — never plaintext `.env` for production
+- Credential lifecycle: issue, renew, suspend, expire, revoke, review, and propagation.
+- Provider registry, schema support, provider health, and adapter boundaries.
+- Pool policy design for jurisdiction, investor class, freshness, allocation caps, and manual review.
+- Chainlink verification, renewal, revocation, and provider-health workflows.
+- CCID binding, CCIP propagation, destination freshness, and reason-coded access checks.
+- Investor portal, issuer dashboard, auditor exports, operations runbooks, and threat-model coverage.
 
-### Testing Requirements
-- Unit tests for every public/external function
-- Edge cases (zero, one, type(uint256).max, empty arrays)
-- Fuzz tests on all financial calculations
-- Invariant tests
-- Fork tests for cross-chain and upgrade validation
+## Product Quality Bar
 
-## Pull Request Process
+- Build toward the production compliance network described in `PRD.md`.
+- Use staged release gates for safety, not reduced product ambition.
+- Never store or emit raw PII, documents, tax IDs, beneficial owner data, provider reports, names, emails, or phone numbers.
+- Legal claims require external legal review.
+- Keep docs aligned with the full product PRD, engineering spec, and production readiness gates.
 
-1. **Fork** the repository
-2. **Create** a feature branch (`feat/description` or `fix/description`)
-3. **Write** tests that cover your changes
-4. **Ensure** CI passes:
-   - `forge fmt --check`
-   - `slither .` + `aderyn .`
-   - `forge test -vvv`
-   - `forge snapshot --check --tolerance 5`
-   - `forge coverage --report lcov` (≥90%)
-5. **Document** any new public interfaces with NatSpec
-6. **Update** gas snapshots if gas profile changes
-7. **Open** a PR with a clear description and linked issue
+## Verification Expectations
 
-## Commit Conventions
+| Change type | Expected verification |
+| --- | --- |
+| Docs only | Check terminology, links, and alignment with `PRD.md` and `ENGINEERING_SPEC.md` |
+| Contracts | Formatting, unit tests, fuzz tests, and relevant invariant tests |
+| Policy logic | Tests for allow, deny, review, allocation caps, jurisdiction rules, expiry, suspension, and revocation |
+| Workflows | Tests for provider pass, fail, manual review, timeout, malformed response, provider pause, and revocation |
+| CCIP flows | Tests for propagation, replay, wrong source, stale nonce, and destination freshness |
 
-- `feat:` — new feature
-- `fix:` — bug fix
-- `docs:` — documentation
-- `test:` — tests
-- `refactor:` — code restructuring
-- `perf:` — performance improvement
-- `security:` — security-related changes
-- `chore:` — maintenance
+If a check cannot run, document the blocker in the PR.
 
-## Review Standards
+## Pull Request Checklist
 
-- At least **1 approving review** required
-- **No pending change requests**
-- **All CI checks green**
-- Reviewer verifies: security implications, gas impact, test coverage, NatSpec completeness
+- Change maps to `PRD.md` or `ENGINEERING_SPEC.md`.
+- Public docs avoid fake deployments, fake provider claims, fake legal approvals, fake audits, fake bounty details, and production onboarding claims.
+- Privacy-sensitive changes state what data is processed, stored, emitted, logged, and intentionally excluded.
+- Tests or verification notes cover the behavior changed.
+- New environment variables use placeholders only.
+- No secrets, raw PII, provider responses, API keys, private keys, or access tokens are committed.
+
+## Commit Style
+
+Use Conventional Commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `security:`, or `chore:`.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the project's license.
-
----
-
-*For questions, open a Discussion or reach out on Discord.*
+By contributing, you agree that your contributions will be licensed under the repository's license once one is selected.
