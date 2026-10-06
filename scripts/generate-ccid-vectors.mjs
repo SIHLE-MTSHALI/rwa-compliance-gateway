@@ -39,9 +39,12 @@ import { spawnSync } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveForge } from "./forge-bin.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const forge = process.env.FORGE_BIN ?? join(process.env.USERPROFILE ?? "", ".foundry", "bin", "forge.exe");
+// Platform-aware. The previous Windows-only path resolved locally and to nothing on the
+// CI runner, where this script gates the CCID parity vectors.
+const forge = resolveForge("generate-ccid-vectors");
 const outPath = join(root, "packages", "sdk", "test", "vectors", "ccid.json");
 
 const BEGIN = "RWA_CCID_VECTORS_V1";

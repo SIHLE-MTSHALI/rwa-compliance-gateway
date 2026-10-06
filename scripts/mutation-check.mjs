@@ -19,9 +19,12 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { resolveForge } from "./forge-bin.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const forge = process.env.FORGE_BIN ?? join(process.env.USERPROFILE ?? "", ".foundry", "bin", "forge.exe");
+// Platform-aware, and fails loudly with a list of where it looked. This previously pointed
+// at a Windows path, which resolved fine locally and to nothing on the CI runner.
+const forge = resolveForge("mutation-check");
 
 /** All mutations, applied one at a time, each reverted before the next. */
 const mutations = [
@@ -225,11 +228,6 @@ function runForge(args) {
     maxBuffer: 128 * 1024 * 1024,
   });
   return { code: result.status, out: `${result.stdout ?? ""}${result.stderr ?? ""}` };
-}
-
-if (!existsSync(forge)) {
-  console.error(`forge not found at ${forge}. Install Foundry, or set FORGE_BIN.`);
-  process.exit(2);
 }
 
 // ---------------------------------------------------------------------------
