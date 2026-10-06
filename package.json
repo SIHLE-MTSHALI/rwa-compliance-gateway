@@ -1,0 +1,33 @@
+{
+  "name": "rwa-compliance-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-conscious compliance credential layer for tokenized real-world asset pools: reason-coded allow/deny/review with no investor PII on chain.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "forge:build": "forge build",
+    "forge:test": "forge test",
+    "forge:test:invariant": "forge test --match-path 'contracts/test/invariant/*'",
+    "forge:fmt": "forge fmt --check",
+    "forge:lint": "forge lint",
+    "privacy:storage": "node scripts/check-no-dynamic-storage.mjs",
+    "docs:claims": "node scripts/check-docs-claims.mjs",
+    "vectors:ccid": "node scripts/generate-ccid-vectors.mjs",
+    "mutation:check": "node scripts/mutation-check.mjs",
+    "size:check": "node scripts/check-contract-sizes.mjs",
+    "verify": "pnpm run forge:fmt && pnpm run forge:build && pnpm run forge:lint && pnpm run size:check && pnpm run privacy:storage && pnpm run forge:test && pnpm run forge:test:invariant && pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "2.1.9"
+  }
+}

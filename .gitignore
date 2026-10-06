@@ -1,52 +1,37 @@
-# Compiler output
+# Foundry
 out/
 cache/
-cache_hardhat/
-artifacts/
-typechain-types/
+broadcast/
+cache_forge/
 
-# Dependencies
-node_modules/
+# Dependencies (restored via `forge install`; .gitmodules is committed)
 lib/
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
 
 # Environment
 .env
 .env.local
 .env.production
+.env.*.local
 
-# IDE
+# IDE / OS
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Coverage
-coverage/
-lcov.info
-coverage.json
-
-# Build artifacts
-dist/
-build/
-
-# Foundry
-broadcast/
-cache_forge/
-
-# Hardhat
-typechain/
-deployments/localhost/
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
 
 # Secrets
 secrets.json
 *.keystore
+
+# Foundry / coverage
+lcov.info
+coverage.json

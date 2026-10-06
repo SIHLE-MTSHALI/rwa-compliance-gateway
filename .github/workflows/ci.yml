@@ -1,0 +1,229 @@
+name: CI
+
+# Runs every gate listed in ENGINEERING_SPEC.md section 7, plus the storage-layout
+# privacy check and the documentation-claims check. Anything that could pass locally
+# and fail here - formatting, line endings, an unwritten parity vector, a docs claim
+# that slipped in - is what this job exists to catch.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A stale PR run tells you nothing; cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: contracts (forge)
+    runs-on: ubuntu-latest
+    steps:
+      # Submodules carry forge-std and OpenZeppelin; `lib/` is gitignored, so a
+      # checkout without `submodules: recursive` compiles against nothing.
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.4
+
+      # Needed by the contract-size step below.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.foundry
+            out
+            cache
+          key: forge-${{ hashFiles('foundry.toml') }}-${{ github.sha }}
+          restore-keys: forge-${{ hashFiles('foundry.toml') }}-
+
+      - name: forge fmt --check
+        run: forge fmt --check
+
+      - name: forge build
+        run: forge build --sizes
+
+      # A separate step from build: `lint_on_build` is off so that a lint finding does
+      # not mask a compilation error in the same output.
+      - name: forge lint
+        run: forge lint
+
+      - name: forge test
+        run: forge test -vvv
+
+      # Spec-mandated as a separate command so invariant failures are
+      # distinguishable from unit failures in the job log.
+      - name: forge test (invariants)
+        run: forge test --match-path 'contracts/test/invariant/*' -vvv
+
+      # Deeper runs for the invariant suite only: these are the properties that must
+      # hold unconditionally, and 128x64 finds far more than 64x32.
+      - name: forge test (invariants, deep)
+        run: FOUNDRY_PROFILE=ci forge test --match-path 'contracts/test/invariant/*' -vvv
+
+      # Contract size budget. A contract that no longer fits becomes silently
+      # undeployable, which is much worse to discover at release time.
+      - name: Contract sizes within limit
+        run: node scripts/check-contract-sizes.mjs
+
+  mutation:
+    name: mutation testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.4
+
+      # No `forge build` step: the harness builds and runs the full suite once per
+      # mutation, so warming the cache here would only be invalidated by the first edit.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The point of the whole exercise. Every mutation must be *caught* by the suite;
+      # a surviving mutation means a real behaviour has no test asserting it, and a
+      # green suite says nothing about that. Slow by nature, so it is its own job.
+      - name: Every seeded mutation is caught
+        run: node scripts/mutation-check.mjs
+
+  privacy:
+    name: privacy (storage layout + docs claims)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Compiled storage layout must declare no dynamic members on the
+      # PII-sensitive contracts. Catches a `string` field added but never written,
+      # which a runtime scan cannot see.
+      - name: No dynamic storage in credential contracts
+        run: node scripts/check-no-dynamic-storage.mjs
+
+      # The vectors must match what the contract produces *now*. A stale committed
+      # vector would make the TypeScript parity test meaningless - it would be
+      # asserting agreement with an older contract forever.
+      - name: CCID vectors are up to date
+        run: |
+          node scripts/generate-ccid-vectors.mjs
+          if ! git diff --quiet -- packages/sdk/test/vectors/ccid.json; then
+            echo "::error::CCID vectors are stale. Run: pnpm run vectors:ccid"
+            git diff -- packages/sdk/test/vectors/ccid.json
+            exit 1
+          fi
+
+      # The repository has no audit and no deployment. Documentation that implies
+      # otherwise is the fastest way to mislead a reader. Negation-aware by design -
+      # see the header comment in scripts/check-docs-claims.mjs for why that matters.
+      - name: Docs contain no unverified claims
+        run: node scripts/check-docs-claims.mjs
+
+  typescript:
+    name: typescript (sdk + workflows)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: pnpm/action-setup@v4
+        # No `version:` key: `packageManager` in the root package.json is the
+        # single source of truth. Specifying both makes the action error out.
+
+      # The lockfile is generated on a different platform than CI runs on, so a plain
+      # install rather than --frozen-lockfile. Drift is asserted below rather than
+      # failing cryptically here.
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      # The workflows package imports the SDK through its built entrypoint, so the
+      # build must precede typechecking or the import does not resolve.
+      - name: Build
+        run: pnpm run build
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: SDK tests
+        run: pnpm --dir packages/sdk test
+
+      - name: Workflow tests
+        run: pnpm --dir workflows test
+
+      - name: Script tests
+        run: npx vitest run scripts/test
+
+  hygiene:
+    name: repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Line endings are normalized by .gitattributes. A CRLF checkout breaks
+      # `forge fmt --check` on files nobody touched, so verify rather than assume.
+      - name: No CRLF line endings
+        run: |
+          if git grep -Il $'\r' -- . ':!pnpm-lock.yaml'; then
+            echo "::error::CRLF line endings found; run: git add --renormalize ."
+            exit 1
+          fi
+
+      - name: No committed secrets or identity data
+        run: |
+          # Fails on the filenames that must never exist in the repository.
+          if git ls-files | grep -Ei '\.(env|keystore|pem|key|p12|pfx)$|(^|/)(secrets?|credentials?)\.(json|yaml|yml|toml)$'; then
+            echo "::error::a secret-like file is tracked"
+            exit 1
+          fi
+          # Fails on identity-bearing *Solidity storage declarations* in production
+          # source. Scoped to `contracts/src/**` deliberately:
+          #   - `contracts/test/**` names these fields in comments documenting the
+          #     mutation cases the privacy tests depend on.
+          #   - `workflows/src/privacy.ts` names them in a *blocklist* - naming a
+          #     field is exactly what forbidding it requires.
+          # Both are legitimate, and a check that flags them creates pressure to
+          # weaken the protections they exist to verify.
+          #
+          # This is a backstop behind `check-no-dynamic-storage.mjs`, not a
+          # replacement: that script walks the compiled layout and is authoritative.
+          if git grep -InE '\b(legalName|fullName|dateOfBirth|passportNumber|taxId|ssn)\b' -- 'contracts/src/**'; then
+            echo "::error::an identity-bearing field name appears in contract source"
+            exit 1
+          fi
+
+      # A dependency that declares the wrong major version of viem will typecheck
+      # against a different ABI surface than the one the SDK encodes.
+      - name: Pinned toolchain matches the lockfile
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const expected = { "pnpm": "9.12.0" };
+            if (pkg.packageManager !== "pnpm@" + expected.pnpm) {
+              console.error("::error::packageManager is " + pkg.packageManager);
+              process.exit(1);
+            }
+            console.log("toolchain pins ok");
+          '

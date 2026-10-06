@@ -1,0 +1,103 @@
+[profile.default]
+src = "contracts/src"
+test = "contracts/test"
+script = "contracts/script"
+out = "out"
+libs = ["lib"]
+
+# Pinned so CI and local runs produce identical bytecode.
+solc = "0.8.28"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+
+# Required, not cosmetic: the compliance module's decision logic and the
+# allocator's accounting touch more values than the legacy codegen keeps on the
+# stack. The IR pipeline also yields smaller bytecode.
+via_ir = true
+
+bytecode_hash = "ipfs"
+cbor_metadata = true
+
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+]
+
+deny = "never"
+
+[profile.default.fuzz]
+runs = 256
+max_test_rejects = 100_000
+
+[profile.default.invariant]
+runs = 64
+depth = 32
+fail_on_revert = false
+call_override = false
+
+[profile.ci.fuzz]
+runs = 2_048
+
+[profile.ci.invariant]
+# Sized against the invariant suite's real cost, not guessed. Each invariant does an
+# exhaustive sweep of the handler's reachable key space (36 credentials x 2 pools) after
+# every handler call, so runtime scales with runs x depth x pairs. 128 x 64 is roughly
+# 4x the default profile and lands in the low minutes; going to 256 x 128 would multiply
+# that again for coverage the deterministic suites already provide per-path.
+runs = 128
+depth = 64
+fail_on_revert = false
+
+[profile.ci]
+verbosity = 3
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "attributes_first"
+quote_style = "double"
+number_underscore = "thousands"
+sort_imports = true
+
+[lint]
+# Advisory rather than a build side effect, so a real compiler error is not
+# buried in dozens of lint warnings. `forge lint` is a separate CI step.
+lint_on_build = false
+
+exclude_lints = [
+    # Timestamps are narrowed from uint256 to uint64 because the on-chain schema
+    # fixes these fields at 64 bits. block.timestamp overflows uint64 around the
+    # year 584942417355, so the truncation is unreachable.
+    "unsafe-typecast",
+
+    # TTL, expiry, and review-window logic is time-based by definition; the
+    # tolerances here are orders of magnitude larger than validator influence.
+    "block-timestamp",
+
+    # CCIP fan-out issues one router call per destination, bounded by
+    # MAX_DESTINATIONS.
+    "calls-loop",
+
+    # Destination validation rejects the batch rather than partially sending.
+    "require-revert-in-loop",
+
+    # External callees are immutable addresses fixed at deploy time, and nonce and
+    # allocation state are committed before the calls.
+    "reentrancy-events",
+
+    # Test-only: `vm.warp(block.timestamp + n)` is how a time-dependent test
+    # advances the clock, and every use here warps forward from the current block.
+    "environment-read-across-mutation",
+
+    # `receiveCredential` is an intentional CCIP dispatch target with no body; it
+    # exists so `selector()` has something to name. Enforcement lives in
+    # `ccipMessageCallback`.
+    "empty-block",
+
+    # `_propagate` ignores the sender's message count by design. The count is
+    # derivable from the `CredentialSent` events, which are the audit record.
+    "unused-return",
+]
